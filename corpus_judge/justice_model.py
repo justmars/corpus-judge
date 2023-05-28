@@ -5,7 +5,7 @@ from dateutil.relativedelta import relativedelta as rd
 from pydantic import Field, validator
 from sqlpyd import IndividualBio
 
-MAX_JUSTICE_AGE = 70
+MAX_JUSTICE_AGE = 70  # 1987 Constitution
 
 
 class Bio(IndividualBio):
@@ -172,7 +172,7 @@ class Justice(Bio):
 
         bio = Bio.from_dict(data)
 
-        # Not all have aliases; default needed
+        # Not all justices have/need aliases; default needed
         alias = data.pop("Alias", None)
         if not alias:
             if bio.last_name and bio.suffix:
@@ -182,8 +182,7 @@ class Justice(Bio):
         if dob := extract_date(data.pop("Born")):
             retire_date = dob + rd(years=MAX_JUSTICE_AGE)
 
-        # Assume that the retire_date is latest possible date of inactivity
-        # but if end_date is present, use this instead
+        # retire_date = latest date allowed; but if end_date present, use this
         inactive_date = retire_date
         if end_date := extract_date(data.pop("End of term")):
             inactive_date = end_date or retire_date
