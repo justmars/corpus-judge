@@ -1,4 +1,5 @@
 import datetime
+from pathlib import Path
 
 from dateutil.parser import parse
 from dateutil.relativedelta import relativedelta as rd
@@ -6,6 +7,7 @@ from pydantic import Field, validator
 from sqlpyd import IndividualBio
 
 MAX_JUSTICE_AGE = 70  # 1987 Constitution
+JUSTICE_FILE = Path(__file__).parent / "sc.yaml"
 
 
 class Bio(IndividualBio):
@@ -53,13 +55,11 @@ class Justice(Bio):
         >>> isinstance(table, Table)
         True
         >>> # See local file
-        >>> from pathlib import Path
-        >>> f = Path(__file__).parent / "sc.yaml"
-        >>> f.exists()
+        >>> JUSTICE_FILE.exists()
         True
         >>> # Can add all pydantic validated records from the local copy of justices to the database.
         >>> import yaml
-        >>> res = c.add_records(Justice, yaml.safe_load(f.read_bytes()))
+        >>> res = c.add_records(Justice, yaml.safe_load(JUSTICE_FILE.read_bytes()))
         >>> len(list(table.rows))
         194
         >>> c.path_to_db.unlink() # tear down
