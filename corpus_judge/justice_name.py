@@ -1,6 +1,6 @@
 import re
 from enum import Enum
-from typing import NamedTuple
+from typing import NamedTuple, Self
 
 from unidecode import unidecode
 
@@ -12,7 +12,16 @@ class OpinionWriterName(NamedTuple):
     per_curiam: bool = False
 
     @classmethod
-    def extract(cls, text: str | None):
+    def extract(cls, text: str | None) -> Self | None:
+        """Will mark `per_curiam` to be True if the regex pattern matches,
+        else, will clean the writer represented by the text, if possible.
+
+        Args:
+            text (str | None): Text to evaluate.
+
+        Returns:
+            Self | None: Instance representing the writer.
+        """
         if not text:
             return None
         if text:
@@ -22,8 +31,7 @@ class OpinionWriterName(NamedTuple):
 
     @classmethod
     def clean(cls, text: str) -> str | None:
-        """Each `ponente` name stored in `decisions_tbl` of the database has been
-        made uniform, e.g.:
+        """Each `ponente` name stored in the database can me uniform, e.g.:
 
         Examples:
             >>> OpinionWriterName.clean("REYES , J.B.L, Acting C.J.") # sample name 1
@@ -606,9 +614,15 @@ class CommonTypos(Enum):
     )
 
     @classmethod
-    def replace_value(cls, candidate: str):
-        """If one of the members matches, return the replacement that is specified
-        in the value."""
+    def replace_value(cls, candidate: str) -> str:
+        """If member matches `candidate`, return replacement specified in value.
+
+        Args:
+            candidate (str): Name of the justice which may contain typos.
+
+        Returns:
+            str: Corrected name, if possible; otherwise just the candidate text.
+        """
         for _, member in cls.__members__.items():
             if member.value[0].search(candidate):
                 return member.value[1]

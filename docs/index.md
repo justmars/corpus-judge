@@ -1,3 +1,8 @@
+---
+hide:
+- navigation
+---
+
 # Justice
 
 A Justice, as defined in this reference document, is one of many justices sitting in the Supreme Court:
@@ -7,6 +12,10 @@ A Justice, as defined in this reference document, is one of many justices sittin
 ## Cleaning Raw Justice Names
 
 ::: corpus_judge.justice_name.OpinionWriterName
+
+## Candidate Justice
+
+::: corpus_judge.justice_select.CandidateJustice
 
 ## View chief justice dates
 
