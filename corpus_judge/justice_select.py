@@ -1,4 +1,5 @@
 import datetime
+import logging
 from typing import Any, NamedTuple
 
 from dateutil.parser import parse
@@ -31,7 +32,6 @@ class CandidateJustice(NamedTuple):
 
     @property
     def src(self):
-        """This may either be just the last name or the full name."""
         return OpinionWriterName.extract(self.text)
 
     @property
@@ -107,22 +107,38 @@ class CandidateJustice(NamedTuple):
             {'id': 137, 'surname': 'Panganiban', 'start_term': '1995-10-05', 'inactive_date': '2006-12-06', 'chief_date': '2005-12-20', 'designation': 'C.J.'}
             >>> c.path_to_db.unlink() # tear down
         """  # noqa: E501
-        opts = []
+        candidate_options = []
         if not self.valid_date:
             return None
-        if not self.candidate:
-            return None
 
-        for candidate in self.rows:
-            if candidate["alias"] and candidate["alias"] == self.candidate:
-                opts.append(candidate)
-                continue
-            elif candidate["surname"] == self.candidate:
-                opts.append(candidate)
-                continue
-        if opts:
-            if len(opts) == 1:
-                res = opts[0]
+        if self.text:
+            # Special rule for duplicate names
+            if "Lopez" in self.text:
+                if "jhosep" in self.text.lower():
+                    for candidate in self.rows:
+                        if int(candidate["id"]) == 190:
+                            candidate_options.append(candidate)
+                elif "mario" in self.text.lower():
+                    for candidate in self.rows:
+                        if int(candidate["id"]) == 185:
+                            candidate_options.append(candidate)
+
+        # only proceed to add more options if special rule not met
+        if not candidate_options:
+            if not self.candidate:
+                return None
+
+            for candidate in self.rows:
+                if candidate["alias"] and candidate["alias"] == self.candidate:
+                    candidate_options.append(candidate)
+                    continue
+                elif candidate["surname"] == self.candidate:
+                    candidate_options.append(candidate)
+                    continue
+
+        if candidate_options:
+            if len(candidate_options) == 1:
+                res = candidate_options[0]
                 res.pop("alias")
                 res["surname"] = res["surname"].title()
                 res["designation"] = "J."
@@ -133,7 +149,9 @@ class CandidateJustice(NamedTuple):
                         res["designation"] = "C.J."
                 return res
             else:
-                print(f"Many {opts=} for {self.candidate=} on {self.valid_date=}")
+                msg = f"Too many {candidate_options=} for {self.candidate=} on {self.valid_date=}. Consider manual intervention."  # noqa: E501
+                logging.error(msg)
+
         return None
 
     @property
