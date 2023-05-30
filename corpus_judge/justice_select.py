@@ -31,6 +31,7 @@ class CandidateJustice(NamedTuple):
 
     @property
     def src(self):
+        """This may either be just the last name or the full name."""
         return OpinionWriterName.extract(self.text)
 
     @property
@@ -83,7 +84,7 @@ class CandidateJustice(NamedTuple):
 
     @property
     def choice(self) -> dict | None:
-        """Based on `get_active_on_date()`, match the cleaned_name to either the alias
+        """Based on `@rows`, match the cleaned_name to either the alias
         of the justice or the justice's last name; on match, determine whether the
         designation should be 'C.J.' or 'J.'
 

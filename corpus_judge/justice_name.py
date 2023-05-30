@@ -5,6 +5,54 @@ from typing import NamedTuple, Self
 from unidecode import unidecode
 
 IS_PER_CURIAM = re.compile(r"per\s+curiam", re.I)  # type: ignore
+FULLNAME_STYLE = re.compile(
+    r"""
+        ^
+            (Chief\s+)?
+            Justice\s+
+            .*
+            \s+
+            (?P<surname>
+                [\w-]+
+                (,?
+                \s+
+                    (
+                        Jr\.|
+                        Sr\.|
+                        I{2,}
+                    )
+                )?
+            )
+        $
+    """,
+    re.I | re.X,
+)
+
+
+def initialize_name(text: str):
+    """Remove unnecessary text and make uniform accented content."""
+    text = unidecode(text)
+    text = text.lower()
+    text = text.strip(",.: ")
+    return text
+
+
+def limit_modern_to_terminal_text(text: str):
+    """Modern convention uses the
+
+    Examples:
+        >>> limit_modern_to_terminal_text('Chief Justice Alexander G. Gesmundo')
+        'gesmundo'
+        >>> limit_modern_to_terminal_text('Justice Marvic M.V.F. Leonen')
+        'leonen'
+        >>> limit_modern_to_terminal_text('Justice Antonio T. Kho, Jr.')
+        'kho, jr.'
+        >>> limit_modern_to_terminal_text('Justice Estela M. Perlas-Bernabe')
+        'perlas-bernabe'
+    """
+    if match := FULLNAME_STYLE.search(text):
+        return match.group("surname").strip().lower()
+    return text
 
 
 class OpinionWriterName(NamedTuple):
@@ -16,22 +64,40 @@ class OpinionWriterName(NamedTuple):
         """Will mark `per_curiam` to be True if the regex pattern matches,
         else, will clean the writer represented by the text, if possible.
 
+        Examples:
+            >>> OpinionWriterName.extract('Justice Marvic M.V.F. Leonen')
+            OpinionWriterName(writer='leonen', per_curiam=False)
+            >>> OpinionWriterName.extract('Justice Filomena D. Signh') # note bad spelling
+            OpinionWriterName(writer='singh', per_curiam=False)
+
         Args:
             text (str | None): Text to evaluate.
 
         Returns:
             Self | None: Instance representing the writer.
-        """
+        """  # noqa: E501
         if not text:
             return None
         if text:
             if IS_PER_CURIAM.search(text):
                 return cls(per_curiam=True)
-            return cls(writer=cls.clean(text))
+            # if text is modern, e.g. from the 2023 SC website, adjust the text
+            # prior to clean() since the clean function was intended for the
+            # more traditional elibrary.
+            text = limit_modern_to_terminal_text(text)
+            writer = cls.clean(text)  # check proper
+            return cls(writer=writer)
 
     @classmethod
     def clean(cls, text: str) -> str | None:
-        """Each `ponente` name stored in the database can me uniform, e.g.:
+        """Each `ponente` name stored in the database can be uniform. Will
+        parse text, apply some cleaning steps, and result in a lower-cased form
+        of the original `text`, e.g.:
+
+        Some constraints:
+
+        1. Must be more than 4 characters
+        2. Must be less than 40 characters
 
         Examples:
             >>> OpinionWriterName.clean("REYES , J.B.L, Acting C.J.") # sample name 1
@@ -41,14 +107,14 @@ class OpinionWriterName(NamedTuple):
         """
 
         no_asterisk = re.sub(r"\[?(\*)+\]?", "", text)
-        surname = init_surnames(no_asterisk)
-        no_suffix = TitleSuffixClean.clean_end(surname).strip()
-        repl = CommonTypos.replace_value(no_suffix).strip()
+        name = initialize_name(no_asterisk)
+        no_suffix = TitleSuffix.cull(name).strip()
+        repl = CommonTypos.replace(no_suffix).strip()
         res = repl + "." if repl.endswith((" jr", " sr")) else repl
-        return res if 4 < len(res) < 20 else None
+        return res if 4 < len(res) < 40 else None
 
 
-class TitleSuffixClean(Enum):
+class TitleSuffix(Enum):
     """The order matters: will try to match the old style first."""
 
     CHIEF = re.compile(
@@ -100,9 +166,15 @@ class TitleSuffixClean(Enum):
     )
 
     @classmethod
-    def clean_end(cls, candidate: str):
-        """If one of the members matches, return the replacement."""
-        for _, member in cls.__members__.items():
+    def cull(cls, candidate: str):
+        """If one of the members matches, return the replacement.
+
+        Examples:
+            >>> TitleSuffix.CHIEF.cull('REYES , J.B.L, Acting C.J.')
+            'REYES , J.B.L'
+
+        """
+        for member in cls:
             if member.value.search(candidate):
                 return member.value.sub("", candidate)
         return candidate
@@ -613,8 +685,28 @@ class CommonTypos(Enum):
         "diokno",
     )
 
+    LAZARO = (
+        re.compile(
+            r"""
+           ^la(.*?)-javier$
+            """,
+            re.I | re.X,
+        ),
+        "lazaro-javier",
+    )
+
+    SINGH = (
+        re.compile(
+            r"""
+            ^signh$
+            """,
+            re.I | re.X,
+        ),
+        "singh",
+    )
+
     @classmethod
-    def replace_value(cls, candidate: str) -> str:
+    def replace(cls, candidate: str) -> str:
         """If member matches `candidate`, return replacement specified in value.
 
         Args:
@@ -623,15 +715,7 @@ class CommonTypos(Enum):
         Returns:
             str: Corrected name, if possible; otherwise just the candidate text.
         """
-        for _, member in cls.__members__.items():
+        for member in cls:
             if member.value[0].search(candidate):
                 return member.value[1]
         return candidate
-
-
-def init_surnames(text: str):
-    """Remove unnecessary text and make uniform accented content."""
-    text = unidecode(text)
-    text = text.lower()
-    text = text.strip(",.: ")
-    return text
