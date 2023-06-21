@@ -2,9 +2,7 @@ from pathlib import Path
 
 import pytest
 import yaml
-from sqlpyd import Connection
-
-from corpus_judge import Justice
+from sqlite_utils import Database
 
 temppath = "tests/test.db"
 
@@ -17,9 +15,8 @@ def justice_records(shared_datadir) -> list[dict]:
 
 @pytest.fixture
 def session(justice_records):
-    c = Connection(DatabasePath=temppath)  # type: ignore
-    c.create_table(Justice)
-    c.add_records(Justice, justice_records)
-    yield c.db
-    c.db.close()  # close the connection
+    db = Database(temppath)
+    db["sc_tbl_justices"].insert_all(justice_records)  # type: ignore
+    yield db
+    db.close()  # close the connection
     Path().cwd().joinpath(temppath).unlink()  # delete the file
