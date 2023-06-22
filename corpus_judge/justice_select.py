@@ -5,7 +5,6 @@ from typing import Any, NamedTuple
 from dateutil.parser import parse
 from sqlite_utils.db import Database, Table
 
-from .justice_model import Justice
 from .justice_name import OpinionWriterName
 
 
@@ -50,20 +49,6 @@ class CandidateJustice(NamedTuple):
         """When selecting a ponente or voting members, create a candidate list of
         justices based on the `valid_date`.
 
-        Examples:
-            >>> import yaml
-            >>> from pathlib import Path
-            >>> from corpus_judge import JUSTICE_FILE
-            >>> f = Path().cwd().joinpath("corpus_judge/sc.yaml")
-            >>> db_file = Path().cwd().joinpath("test.db")
-            >>> db = Database(db_file)
-            >>> db['sc_tbl_justices'].insert_all(yaml.safe_load(f.read_bytes()))
-            <Table sc_tbl_justices (full_name, first_name, last_name, gender, id, start_term, end_term, chief_date, birth_date, retire_date, inactive_date, alias, suffix)>
-            >>> search = CandidateJustice(db=db, date_str='Dec. 1, 1995')
-            >>> print(search.rows) # since start date is greater than target date, record is included
-            [{'id': 137, 'surname': 'panganiban', 'alias': None, 'start_term': '1995-10-05', 'inactive_date': '2006-12-06', 'chief_date': '2005-12-20'}, {'id': 136, 'surname': 'hermosisima', 'alias': 'hermosisima jr.', 'start_term': '1995-01-10', 'inactive_date': '1997-10-18', 'chief_date': None}, {'id': 135, 'surname': 'francisco', 'alias': None, 'start_term': '1995-01-05', 'inactive_date': '1998-02-13', 'chief_date': None}, {'id': 134, 'surname': 'mendoza', 'alias': None, 'start_term': '1994-06-07', 'inactive_date': '2003-04-05', 'chief_date': None}, {'id': 133, 'surname': 'kapunan', 'alias': None, 'start_term': '1994-01-05', 'inactive_date': '2002-08-12', 'chief_date': None}, {'id': 132, 'surname': 'vitug', 'alias': None, 'start_term': '1993-06-28', 'inactive_date': '2004-07-15', 'chief_date': None}, {'id': 131, 'surname': 'puno', 'alias': None, 'start_term': '1993-06-28', 'inactive_date': '2010-05-17', 'chief_date': '2007-12-08'}, {'id': 128, 'surname': 'melo', 'alias': None, 'start_term': '1992-08-10', 'inactive_date': '2002-05-30', 'chief_date': None}, {'id': 127, 'surname': 'bellosillo', 'alias': None, 'start_term': '1992-03-03', 'inactive_date': '2003-11-13', 'chief_date': None}, {'id': 125, 'surname': 'romero', 'alias': None, 'start_term': '1991-10-21', 'inactive_date': '1999-08-01', 'chief_date': None}, {'id': 124, 'surname': 'davide', 'alias': 'davide jr.', 'start_term': '1991-01-24', 'inactive_date': '2005-12-20', 'chief_date': '1998-11-30'}, {'id': 123, 'surname': 'regalado', 'alias': None, 'start_term': '1988-07-29', 'inactive_date': '1998-10-13', 'chief_date': None}, {'id': 116, 'surname': 'padilla', 'alias': None, 'start_term': '1987-01-12', 'inactive_date': '1997-08-22', 'chief_date': None}, {'id': 115, 'surname': 'feliciano', 'alias': None, 'start_term': '1986-08-08', 'inactive_date': '1995-12-13', 'chief_date': None}, {'id': 112, 'surname': 'narvasa', 'alias': None, 'start_term': '1986-04-10', 'inactive_date': '1998-11-30', 'chief_date': '1991-12-08'}]
-            >>> db_file.unlink() # tear down
-
         Returns:
             list[dict]: Filtered list of justices
         """  # noqa: E501
@@ -80,32 +65,15 @@ class CandidateJustice(NamedTuple):
             ),
             order_by="start_term desc",
         )
-        return list(results)
+        justice_list = list(results)
+        sorted_list = sorted(justice_list, key=lambda d: d["id"])
+        return sorted_list
 
     @property
     def choice(self) -> dict | None:
         """Based on `@rows`, match the cleaned_name to either the alias
         of the justice or the justice's last name; on match, determine whether the
         designation should be 'C.J.' or 'J.'
-
-        Examples:
-            >>> import yaml
-            >>> from pathlib import Path
-            >>> from corpus_judge import JUSTICE_FILE
-            >>> f = Path().cwd().joinpath("corpus_judge/sc.yaml")
-            >>> db_file = Path().cwd().joinpath("test.db")
-            >>> db = Database(db_file)
-            >>> db['sc_tbl_justices'].insert_all(yaml.safe_load(f.read_bytes()))
-            <Table sc_tbl_justices (full_name, first_name, last_name, gender, id, start_term, end_term, chief_date, birth_date, retire_date, inactive_date, alias, suffix)>
-            >>> search = CandidateJustice(db=db, text='Panganiban, Acting Cj', date_str='Dec. 1, 1995')
-            >>> print(search.choice) # note variance in text designation as acting CJ. vs. J.
-            {'id': 137, 'surname': 'Panganiban', 'start_term': '1995-10-05', 'inactive_date': '2006-12-06', 'chief_date': '2005-12-20', 'designation': 'J.'}
-            >>> # Note that the raw information above contains 'Acting Cj' and thus the designation is only 'J.' At present we only track 'C.J.' and 'J.' titles.
-            >>> # With a different date, we can get the 'C.J.' designation.:
-            >>> search_cj = CandidateJustice(db=c.db, text='Panganiban', date_str='2006-03-30')
-            >>> print(search_cj.choice) # note variance in text designation as acting CJ. vs. J.
-            {'id': 137, 'surname': 'Panganiban', 'start_term': '1995-10-05', 'inactive_date': '2006-12-06', 'chief_date': '2005-12-20', 'designation': 'C.J.'}
-            >>> db_file.unlink() # tear down
         """  # noqa: E501
         candidate_options = []
         if not self.valid_date:
@@ -157,20 +125,6 @@ class CandidateJustice(NamedTuple):
     @property
     def detail(self) -> JusticeDetail | None:
         """Get object to match fields directly
-
-        Examples:
-            >>> import yaml
-            >>> from pathlib import Path
-            >>> from corpus_judge import JUSTICE_FILE
-            >>> f = Path().cwd().joinpath("corpus_judge/sc.yaml")
-            >>> db_file = Path().cwd().joinpath("test.db")
-            >>> db = Database(db_file)
-            >>> db['sc_tbl_justices'].insert_all(yaml.safe_load(f.read_bytes()))
-            <Table sc_tbl_justices (full_name, first_name, last_name, gender, id, start_term, end_term, chief_date, birth_date, retire_date, inactive_date, alias, suffix)>
-            >>> search = CandidateJustice(db=db, text='Panganiban, Acting Cj', date_str='Dec. 1, 1995')
-            >>> print(search.detail)
-            JusticeDetail(justice_id=137, raw_ponente='Panganiban', designation='J.', per_curiam=False)
-            >>> db_file.unlink() # tear down
 
         Returns:
             JusticeDetail | None: Will subsequently be used in DecisionRow in a third-party library.

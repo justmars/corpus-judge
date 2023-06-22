@@ -4,7 +4,7 @@ from pathlib import Path
 
 from dateutil.parser import parse
 from dateutil.relativedelta import relativedelta as rd
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 MAX_JUSTICE_AGE = 70  # 1987 Constitution
 JUSTICE_FILE = Path(__file__).parent / "sc.yaml"
@@ -46,22 +46,11 @@ class Justice(BaseModel):
     retire_date |str | Based on the Birth Date, if it exists, it is the maximum term of service allowed by law.
     inactive_date |str | Which date is earliest inactive date of the Justice, the retire date is set automatically but it is not guaranteed to to be the actual inactive date. So the inactive date is either that specified in the `end_term` or the `retire_date`, whichever is earlier.
 
-    Examples:
-        >>> import yaml
-        >>> from pathlib import Path
-        >>> from corpus_judge import JUSTICE_FILE
-        >>> f = Path().cwd().joinpath("corpus_judge/sc.yaml")
-        >>> db_file = Path().cwd().joinpath("test.db")
-        >>> db = Database(db_file)
-        >>> db['sc_tbl_justices'].insert_all(yaml.safe_load(f.read_bytes()))
-        >>> len(list(db['sc_tbl_justices'].rows))
-        194
-        >>> db_file.unlink() # tear down
-
     The list of justices from the sc.yaml file are parsed through this model prior to being inserted
     into the database.
     """  # noqa: E501
 
+    model_config = ConfigDict(use_enum_values=True)
     id: int = Field(
         ...,
         title="Justice ID Identifier",
@@ -137,9 +126,6 @@ class Justice(BaseModel):
             if values["birth_date"] + rd(years=MAX_JUSTICE_AGE) != v:
                 raise ValueError("Must be 70 years from birth date.")
         return v
-
-    class Config:
-        use_enum_values = True
 
     @classmethod
     def from_data(cls, data: dict):

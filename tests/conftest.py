@@ -4,7 +4,7 @@ import pytest
 import yaml
 from sqlite_utils import Database
 
-temppath = "tests/test.db"
+temppath = "test.db"
 
 
 @pytest.fixture
@@ -14,9 +14,10 @@ def justice_records(shared_datadir) -> list[dict]:
 
 
 @pytest.fixture
-def session(justice_records):
-    db = Database(temppath)
+def session(justice_records, shared_datadir):
+    p = shared_datadir / temppath
+    db = Database(p)
     db["sc_tbl_justices"].insert_all(justice_records)  # type: ignore
     yield db
     db.close()  # close the connection
-    Path().cwd().joinpath(temppath).unlink()  # delete the file
+    p.unlink()
