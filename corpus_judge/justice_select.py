@@ -19,6 +19,7 @@ class CandidateJustice(NamedTuple):
     db: Database
     text: str | None = None
     date_str: str | None = None
+    tablename: str = "sc_tbl_justices"
 
     @property
     def valid_date(self) -> datetime.date | None:
@@ -39,7 +40,7 @@ class CandidateJustice(NamedTuple):
 
     @property
     def table(self) -> Table:
-        res = self.db["sc_tbl_justices"]
+        res = self.db[self.tablename]
         if isinstance(res, Table):
             return res
         raise Exception("Not a valid table.")

@@ -1,6 +1,5 @@
 .DS_Store
 .ruff_cache
-poetry.lock
 *.sqlite
 *.db
 *.db-shm
