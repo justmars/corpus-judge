@@ -17,7 +17,7 @@ def justice_records(shared_datadir) -> list[dict]:
 def session(justice_records, shared_datadir):
     p = shared_datadir / temppath
     db = Database(p)
-    db["sc_tbl_justices"].insert_all(justice_records)  # type: ignore
+    db["justices"].insert_all(justice_records)  # type: ignore
     yield db
     db.close()  # close the connection
     p.unlink()

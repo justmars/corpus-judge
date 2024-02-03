@@ -1,5 +1,6 @@
 import datetime
 import logging
+from difflib import get_close_matches
 from typing import Any, NamedTuple
 
 from dateutil.parser import parse
@@ -19,7 +20,7 @@ class CandidateJustice(NamedTuple):
     db: Database
     text: str | None = None
     date_str: str | None = None
-    tablename: str = "sc_tbl_justices"
+    tablename: str = "justices"
 
     @property
     def valid_date(self) -> datetime.date | None:
@@ -61,7 +62,7 @@ class CandidateJustice(NamedTuple):
             where=criteria,
             where_args=params,
             select=(
-                "id, lower(last_name) surname, alias, start_term,"
+                "id, full_name, lower(last_name) surname, alias, start_term,"
                 " inactive_date, chief_date"
             ),
             order_by="start_term desc",
@@ -81,7 +82,7 @@ class CandidateJustice(NamedTuple):
             return None
 
         if self.text:
-            # Special rule for duplicate names
+            # Special rule for duplicate last names
             if "Lopez" in self.text:
                 if "jhosep" in self.text.lower():
                     for candidate in self.rows:
@@ -121,6 +122,30 @@ class CandidateJustice(NamedTuple):
                 msg = f"Too many {candidate_options=} for {self.candidate=} on {self.valid_date=}. Consider manual intervention."  # noqa: E501
                 logging.error(msg)
 
+        if self.text:
+            if matches := get_close_matches(
+                self.text,
+                possibilities=[row["full_name"] for row in self.rows],
+                n=1,
+                cutoff=0.7,
+            ):
+                if options := list(
+                    self.db[self.tablename].rows_where(
+                        "full_name = ?", where_args=(matches[0],)
+                    )
+                ):
+                    res: dict[str, str] = {}
+                    selected = options[0]
+                    res["id"] = selected["id"]
+                    res["surname"] = selected["last_name"]
+                    res["designation"] = "J."
+                    if chief_date := selected.get("chief_date"):
+                        s = parse(chief_date).date()
+                        e = parse(res["inactive_date"]).date()
+                        if s < self.valid_date < e:
+                            res["designation"] = "C.J."
+                    return res
+
         return None
 
     @property
@@ -128,7 +153,7 @@ class CandidateJustice(NamedTuple):
         """Get object to match fields directly
 
         Returns:
-            JusticeDetail | None: Will subsequently be used in DecisionRow in a third-party library.
+            JusticeDetail | None: Can subsequently be used in third-party library.
         """  # noqa: E501
         if not self.src:
             return None

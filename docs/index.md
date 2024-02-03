@@ -9,6 +9,31 @@ A Justice, as defined in this reference document, is one of many justices sittin
 
 ::: corpus_judge.justice_model.Justice
 
+## Creating a Justice table
+
+The source file for the sqlite database is `sc.yaml`. This ought to be edited whenever
+new justices are added. It is referenced via `JUSTICE_FILE`:
+
+Note the default table name used by `CandidateJustice` is "justices".
+
+```py
+from corpus_judge import JUSTICE_FILE
+from sqlite_utils import Database
+from pathlib import Path
+import yaml
+
+def add_justices(db: Database):
+    tbl = db["justices"] # default table name
+    if not tbl.exists():
+        file_content = JUSTICE_FILE.read_bytes()
+        records = yaml.safe_load(file_content)
+        tbl.insert_all(records, ignore=True)  # type: ignore
+
+p = Path("new.db")
+db = Database(p)
+add_justices(db)
+```
+
 ## Cleaning Raw Justice Names
 
 ::: corpus_judge.justice_name.OpinionWriterName
