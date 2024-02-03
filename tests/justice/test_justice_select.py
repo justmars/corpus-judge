@@ -32,6 +32,7 @@ def candidate_as_cj(session):
 def test_justice_choice(candidate):
     assert candidate.choice == {
         "id": 137,
+        "full_name": "Artemio V. Panganiban",
         "surname": "Panganiban",
         "start_term": "1995-10-05",
         "inactive_date": "2006-12-06",
