@@ -85,8 +85,9 @@ class OpinionWriterName(NamedTuple):
             # prior to clean() since the clean function was intended for the
             # more traditional elibrary.
             text = limit_modern_to_terminal_text(text)
-            writer = cls.clean(text)  # check proper
-            return cls(writer=writer)
+            if text:
+                writer = cls.clean(text)  # check proper
+                return cls(writer=writer)
 
     @classmethod
     def clean(cls, text: str) -> str | None:
@@ -693,6 +694,16 @@ class CommonTypos(Enum):
             re.I | re.X,
         ),
         "lazaro-javier",
+    )
+
+    KHO = (
+        re.compile(
+            r"""
+            ^kho[\s,]+jr
+            """,
+            re.I | re.X,
+        ),
+        "kho jr.",
     )
 
     SINGH = (
