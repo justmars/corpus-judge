@@ -1,8 +1,9 @@
-site_name: corpus-judge Docs
-site_description: Cleaning, setting Justices
-site_url: https://mv3.dev
+site_name: Corpus Judge Docs
+site_description: |
+  Cleaning, setting justices of the Supreme Court.
+site_url: https://lawsql.com
 site_author: Marcelino Veloso III
-repo_url: https://github.com/justmars/corpus-judge
+repo_url: https://github.com/justmars/citation-date
 dev_addr: '127.0.0.1:8001'
 theme:
   name: "material"
@@ -23,7 +24,7 @@ theme:
         icon: material/brightness-4
         name: Switch to light mode
 nav:
-  - Overview: index.md
+- Overview: index.md
 extra:
   homepage: https://mv3.dev
   social:
@@ -43,6 +44,9 @@ plugins:
             show_category_heading: true
             show_source: true
             heading_level: 3
+            inherited_members: true # added
+            extra:
+              crossref: true   # <-- move crossref here
   - search:
       lang: en
 markdown_extensions:
@@ -63,13 +67,11 @@ markdown_extensions:
       pygments_lang_class: true
   - pymdownx.inlinehilite
   - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.emoji
   - pymdownx.superfences:
       custom_fences:
         - name: mermaid
           class: mermaid
-          format: !!python/name:pymdownx.superfences.fence_code_format
-  - pymdownx.emoji:
-      emoji_index: !!python/name:material.extensions.emoji.twemoji
-      emoji_generator: !!python/name:materialx.emoji.to_svg
-  - pymdownx.tabbed:
-      alternate_style: true
+          format: pymdownx.superfences.fence_code_format

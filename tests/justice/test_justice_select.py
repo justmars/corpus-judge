@@ -1,4 +1,5 @@
 import pytest
+
 from corpus_judge import CandidateJustice, JusticeDetail
 
 
